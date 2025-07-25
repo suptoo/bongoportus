@@ -1,84 +1,190 @@
-// Mobile Navigation Toggle
-const navToggle = document.querySelector('.nav-toggle');
+// Mobile Navigation
+const hamburger = document.querySelector('.hamburger');
 const navMenu = document.querySelector('.nav-menu');
 
-navToggle.addEventListener('click', () => {
+hamburger.addEventListener('click', () => {
+    hamburger.classList.toggle('active');
     navMenu.classList.toggle('active');
 });
 
 // Close mobile menu when clicking on a link
-document.querySelectorAll('.nav-link').forEach(link => {
+document.querySelectorAll('.nav-menu a').forEach(link => {
     link.addEventListener('click', () => {
+        hamburger.classList.remove('active');
         navMenu.classList.remove('active');
     });
 });
 
-// Smooth scrolling for navigation links
+// Smooth scrolling
 function scrollToSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    if (section) {
-        section.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
+    document.getElementById(sectionId).scrollIntoView({
+        behavior: 'smooth'
+    });
+}
+
+// Pricing calculator
+const pricingRates = {
+    electronics: {
+        air: { base: 8, perKg: 12, customs: 0.15, delivery: '3-7 days' },
+        sea: { base: 15, perKg: 3, customs: 0.15, delivery: '15-25 days' }
+    },
+    textiles: {
+        air: { base: 6, perKg: 8, customs: 0.12, delivery: '3-7 days' },
+        sea: { base: 12, perKg: 2, customs: 0.12, delivery: '15-25 days' }
+    },
+    machinery: {
+        sea: { base: 25, perKg: 4, customs: 0.18, delivery: '20-30 days' }
+    },
+    home: {
+        air: { base: 10, perKg: 15, customs: 0.14, delivery: '3-7 days' },
+        sea: { base: 18, perKg: 3.5, customs: 0.14, delivery: '15-25 days' }
+    },
+    automotive: {
+        air: { base: 12, perKg: 18, customs: 0.16, delivery: '3-7 days' },
+        sea: { base: 20, perKg: 4.5, customs: 0.16, delivery: '18-28 days' }
+    },
+    beauty: {
+        air: { base: 7, perKg: 10, customs: 0.13, delivery: '3-7 days' },
+        sea: { base: 14, perKg: 2.5, customs: 0.13, delivery: '15-25 days' }
+    }
+};
+
+// Update shipping method options based on product category
+document.getElementById('productCategory').addEventListener('change', function() {
+    const category = this.value;
+    const shippingSelect = document.getElementById('shippingMethod');
+    
+    // Clear existing options
+    shippingSelect.innerHTML = '<option value="">Select Method</option>';
+    
+    if (category && pricingRates[category]) {
+        const availableMethods = Object.keys(pricingRates[category]);
+        
+        availableMethods.forEach(method => {
+            const option = document.createElement('option');
+            option.value = method;
+            option.textContent = method === 'air' ? 'Air Freight' : 'Sea Freight';
+            shippingSelect.appendChild(option);
         });
+    }
+});
+
+// Quote form submission
+document.getElementById('quoteForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const category = document.getElementById('productCategory').value;
+    const method = document.getElementById('shippingMethod').value;
+    const weight = parseFloat(document.getElementById('weight').value);
+    const name = document.getElementById('name').value;
+    const phone = document.getElementById('phone').value;
+    const email = document.getElementById('email').value;
+    
+    if (!category || !method || !weight || !name || !phone || !email) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    // Check if the selected method is available for the category
+    if (!pricingRates[category] || !pricingRates[category][method]) {
+        alert('Selected shipping method is not available for this product category');
+        return;
+    }
+    
+    const rates = pricingRates[category][method];
+    
+    // Calculate costs
+    const shippingCost = rates.base + (weight * rates.perKg);
+    const customsCost = shippingCost * rates.customs;
+    const serviceFee = 25; // Fixed service fee
+    const totalCost = shippingCost + customsCost + serviceFee;
+    
+    // Display results
+    document.getElementById('shippingCost').textContent = `$${shippingCost.toFixed(2)}`;
+    document.getElementById('customsCost').textContent = `$${customsCost.toFixed(2)}`;
+    document.getElementById('serviceFee').textContent = `$${serviceFee.toFixed(2)}`;
+    document.getElementById('totalCost').textContent = `$${totalCost.toFixed(2)}`;
+    document.getElementById('deliveryTime').textContent = rates.delivery;
+    
+    // Show result
+    document.getElementById('quoteResult').style.display = 'block';
+    document.getElementById('quoteResult').scrollIntoView({ behavior: 'smooth' });
+    
+    // Store quote data for contact
+    window.currentQuote = {
+        category,
+        method,
+        weight,
+        totalCost: totalCost.toFixed(2),
+        deliveryTime: rates.delivery,
+        customerName: name,
+        customerPhone: phone,
+        customerEmail: email
+    };
+});
+
+// Contact us function
+function contactUs() {
+    if (window.currentQuote) {
+        const message = `Hello! I'm interested in importing ${window.currentQuote.category} products using ${window.currentQuote.method} freight. 
+        
+Quote Details:
+- Weight: ${window.currentQuote.weight}kg
+- Total Cost: $${window.currentQuote.totalCost}
+- Delivery Time: ${window.currentQuote.deliveryTime}
+        
+Please contact me to proceed with this shipment.
+
+Best regards,
+${window.currentQuote.customerName}
+Phone: ${window.currentQuote.customerPhone}
+Email: ${window.currentQuote.customerEmail}`;
+        
+        // You can integrate with email service or WhatsApp here
+        const whatsappUrl = `https://wa.me/8801234567890?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+    } else {
+        scrollToSection('contact');
     }
 }
 
-// Add smooth scrolling to all navigation links
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const targetId = this.getAttribute('href').substring(1);
-        scrollToSection(targetId);
-    });
-});
-
-// Contact form handling
+// Contact form submission
 document.getElementById('contactForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
-    // Get form data
     const formData = new FormData(this);
-    const data = Object.fromEntries(formData);
+    const name = this.querySelector('input[type="text"]').value;
+    const email = this.querySelector('input[type="email"]').value;
+    const phone = this.querySelector('input[type="tel"]').value;
+    const message = this.querySelector('textarea').value;
     
-    // Simple validation
-    if (!data.name || !data.email || !data.service || !data.message) {
-        alert('Please fill in all required fields.');
-        return;
-    }
-    
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.email)) {
-        alert('Please enter a valid email address.');
-        return;
-    }
-    
-    // Simulate form submission
-    const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    
-    submitBtn.textContent = 'Sending...';
-    submitBtn.disabled = true;
-    
-    // Simulate API call
-    setTimeout(() => {
-        alert('Thank you for your message! We will get back to you within 24 hours.');
-        this.reset();
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }, 2000);
+    // Here you would typically send the data to your server
+    alert(`Thank you ${name}! Your message has been sent. We'll contact you soon.`);
+    this.reset();
 });
 
-// Navbar background change on scroll
-window.addEventListener('scroll', () => {
-    const navbar = document.querySelector('.navbar');
-    if (window.scrollY > 50) {
-        navbar.style.background = 'rgba(255, 255, 255, 0.95)';
-        navbar.style.backdropFilter = 'blur(10px)';
+// Product card interactions
+document.querySelectorAll('.product-card').forEach(card => {
+    card.addEventListener('click', function() {
+        const category = this.dataset.category;
+        document.getElementById('productCategory').value = category;
+        
+        // Trigger change event to update shipping methods
+        document.getElementById('productCategory').dispatchEvent(new Event('change'));
+        
+        scrollToSection('pricing');
+    });
+});
+
+// Navbar scroll effect
+window.addEventListener('scroll', function() {
+    const header = document.querySelector('.header');
+    if (window.scrollY > 100) {
+        header.style.background = 'rgba(255, 255, 255, 0.95)';
+        header.style.backdropFilter = 'blur(10px)';
     } else {
-        navbar.style.background = '#fff';
-        navbar.style.backdropFilter = 'none';
+        header.style.background = '#fff';
+        header.style.backdropFilter = 'none';
     }
 });
 
@@ -88,7 +194,7 @@ const observerOptions = {
     rootMargin: '0px 0px -50px 0px'
 };
 
-const observer = new IntersectionObserver((entries) => {
+const observer = new IntersectionObserver(function(entries) {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
             entry.target.style.opacity = '1';
@@ -97,77 +203,20 @@ const observer = new IntersectionObserver((entries) => {
     });
 }, observerOptions);
 
-// Observe elements for animation
-document.addEventListener('DOMContentLoaded', () => {
-    const animateElements = document.querySelectorAll('.service-card, .benefit, .feature');
-    
-    animateElements.forEach(el => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(30px)';
-        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-        observer.observe(el);
-    });
+// Observe all cards and sections
+document.querySelectorAll('.service-card, .product-card, .quote-form').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(30px)';
+    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    observer.observe(el);
 });
 
-// Add loading animation for images
-document.addEventListener('DOMContentLoaded', () => {
-    const images = document.querySelectorAll('img');
-    
-    images.forEach(img => {
-        img.addEventListener('load', () => {
-            img.style.opacity = '1';
-        });
-        
-        // Set initial opacity
-        img.style.opacity = '0';
-        img.style.transition = 'opacity 0.3s ease';
-    });
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Set current year in footer if needed
+    const currentYear = new Date().getFullYear();
+    const footerText = document.querySelector('.footer-bottom p');
+    if (footerText) {
+        footerText.textContent = footerText.textContent.replace('2024', currentYear);
+    }
 });
-
-// Add click effect to buttons
-document.querySelectorAll('.btn').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-        const ripple = document.createElement('span');
-        const rect = this.getBoundingClientRect();
-        const size = Math.max(rect.width, rect.height);
-        const x = e.clientX - rect.left - size / 2;
-        const y = e.clientY - rect.top - size / 2;
-        
-        ripple.style.width = ripple.style.height = size + 'px';
-        ripple.style.left = x + 'px';
-        ripple.style.top = y + 'px';
-        ripple.classList.add('ripple');
-        
-        this.appendChild(ripple);
-        
-        setTimeout(() => {
-            ripple.remove();
-        }, 600);
-    });
-});
-
-// Add ripple effect CSS
-const style = document.createElement('style');
-style.textContent = `
-    .btn {
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .ripple {
-        position: absolute;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.6);
-        transform: scale(0);
-        animation: ripple-animation 0.6s linear;
-        pointer-events: none;
-    }
-    
-    @keyframes ripple-animation {
-        to {
-            transform: scale(4);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
