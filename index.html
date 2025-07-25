@@ -1,173 +1,308 @@
-// Mobile Navigation Toggle
-const navToggle = document.querySelector('.nav-toggle');
-const navMenu = document.querySelector('.nav-menu');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BongoPortus - Import from China to Bangladesh</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="logo">
+                    <i class="fas fa-ship"></i>
+                    <span>BongoPortus</span>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#services">Services</a></li>
+                    <li><a href="#products">Products</a></li>
+                    <li><a href="#pricing">Pricing</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
 
-navToggle.addEventListener('click', () => {
-    navMenu.classList.toggle('active');
-});
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1>Import Products from China to Bangladesh</h1>
+            <p>Professional import services with air and sea shipping options. Get the best rates for your business needs.</p>
+            <div class="hero-buttons">
+                <button class="btn-primary" onclick="scrollToSection('pricing')">Get Quote</button>
+                <button class="btn-secondary" onclick="scrollToSection('services')">Our Services</button>
+            </div>
+        </div>
+        <div class="hero-image">
+            <i class="fas fa-globe-asia"></i>
+        </div>
+    </section>
 
-// Close mobile menu when clicking on a link
-document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', () => {
-        navMenu.classList.remove('active');
-    });
-});
+    <!-- Services Section -->
+    <section id="services" class="services">
+        <div class="container">
+            <h2>Our Shipping Services</h2>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i class="fas fa-plane"></i>
+                    </div>
+                    <h3>Air Freight</h3>
+                    <p>Fast delivery in 3-7 days. Perfect for urgent shipments and high-value products.</p>
+                    <ul>
+                        <li>3-7 days delivery</li>
+                        <li>Door-to-door service</li>
+                        <li>Real-time tracking</li>
+                        <li>Insurance included</li>
+                    </ul>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i class="fas fa-ship"></i>
+                    </div>
+                    <h3>Sea Freight</h3>
+                    <p>Cost-effective solution for bulk orders. Delivery in 15-25 days with competitive rates.</p>
+                    <ul>
+                        <li>15-25 days delivery</li>
+                        <li>Bulk order discounts</li>
+                        <li>Container shipping</li>
+                        <li>Customs clearance</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
 
-// Smooth scrolling for navigation links
-function scrollToSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    if (section) {
-        section.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-        });
-    }
-}
+    <!-- Products Section -->
+    <section id="products" class="products">
+        <div class="container">
+            <h2>Product Categories</h2>
+            <div class="products-grid">
+                <div class="product-card" data-category="electronics">
+                    <i class="fas fa-laptop"></i>
+                    <h3>Electronics</h3>
+                    <p>Smartphones, laptops, accessories</p>
+                    <span class="shipping-method">Air Freight Recommended</span>
+                </div>
+                <div class="product-card" data-category="textiles">
+                    <i class="fas fa-tshirt"></i>
+                    <h3>Textiles & Clothing</h3>
+                    <p>Fabrics, garments, accessories</p>
+                    <span class="shipping-method">Sea/Air Available</span>
+                </div>
+                <div class="product-card" data-category="machinery">
+                    <i class="fas fa-cogs"></i>
+                    <h3>Machinery</h3>
+                    <p>Industrial equipment, tools</p>
+                    <span class="shipping-method">Sea Freight Only</span>
+                </div>
+                <div class="product-card" data-category="home">
+                    <i class="fas fa-home"></i>
+                    <h3>Home & Garden</h3>
+                    <p>Furniture, decor, appliances</p>
+                    <span class="shipping-method">Sea Freight Recommended</span>
+                </div>
+                <div class="product-card" data-category="automotive">
+                    <i class="fas fa-car"></i>
+                    <h3>Automotive</h3>
+                    <p>Parts, accessories, tools</p>
+                    <span class="shipping-method">Sea/Air Available</span>
+                </div>
+                <div class="product-card" data-category="beauty">
+                    <i class="fas fa-spa"></i>
+                    <h3>Beauty & Health</h3>
+                    <p>Cosmetics, supplements</p>
+                    <span class="shipping-method">Air Freight Recommended</span>
+                </div>
+            </div>
+        </div>
+    </section>
 
-// Add smooth scrolling to all navigation links
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const targetId = this.getAttribute('href').substring(1);
-        scrollToSection(targetId);
-    });
-});
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing">
+        <div class="container">
+            <h2>Get Your Quote</h2>
+            <div class="quote-form-container">
+                <form id="quoteForm" class="quote-form">
+                    <div class="form-group">
+                        <label for="productCategory">Product Category</label>
+                        <select id="productCategory" required>
+                            <option value="">Select Category</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="textiles">Textiles & Clothing</option>
+                            <option value="machinery">Machinery</option>
+                            <option value="home">Home & Garden</option>
+                            <option value="automotive">Automotive</option>
+                            <option value="beauty">Beauty & Health</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="shippingMethod">Shipping Method</label>
+                        <select id="shippingMethod" required>
+                            <option value="">Select Method</option>
+                            <option value="air">Air Freight</option>
+                            <option value="sea">Sea Freight</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="weight">Weight (kg)</label>
+                            <input type="number" id="weight" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="dimensions">Dimensions (L×W×H cm)</label>
+                            <input type="text" id="dimensions" placeholder="e.g., 50×30×20" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="name">Your Name</label>
+                            <input type="text" id="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Calculate Quote</button>
+                </form>
+                
+                <div id="quoteResult" class="quote-result" style="display: none;">
+                    <h3>Your Quote</h3>
+                    <div class="quote-details">
+                        <div class="quote-item">
+                            <span>Shipping Cost:</span>
+                            <span id="shippingCost">$0</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Customs & Duties:</span>
+                            <span id="customsCost">$0</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Service Fee:</span>
+                            <span id="serviceFee">$0</span>
+                        </div>
+                        <div class="quote-item total">
+                            <span>Total Cost:</span>
+                            <span id="totalCost">$0</span>
+                        </div>
+                        <div class="quote-item">
+                            <span>Estimated Delivery:</span>
+                            <span id="deliveryTime">-</span>
+                        </div>
+                    </div>
+                    <button class="btn-secondary" onclick="contactUs()">Contact Us to Proceed</button>
+                </div>
+            </div>
+        </div>
+    </section>
 
-// Contact form handling
-document.getElementById('contactForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // Get form data
-    const formData = new FormData(this);
-    const data = Object.fromEntries(formData);
-    
-    // Simple validation
-    if (!data.name || !data.email || !data.service || !data.message) {
-        alert('Please fill in all required fields.');
-        return;
-    }
-    
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.email)) {
-        alert('Please enter a valid email address.');
-        return;
-    }
-    
-    // Simulate form submission
-    const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    
-    submitBtn.textContent = 'Sending...';
-    submitBtn.disabled = true;
-    
-    // Simulate API call
-    setTimeout(() => {
-        alert('Thank you for your message! We will get back to you within 24 hours.');
-        this.reset();
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }, 2000);
-});
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <h2>Contact Us</h2>
+            <div class="contact-grid">
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div>
+                            <h4>Address</h4>
+                            <p>123 Import Street, Dhaka, Bangladesh</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-phone"></i>
+                        <div>
+                            <h4>Phone</h4>
+                            <p>+880 1234-567890</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <div>
+                            <h4>Email</h4>
+                            <p>info@bongoportus.com</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <h4>Business Hours</h4>
+                            <p>Mon-Fri: 9AM-6PM<br>Sat: 9AM-2PM</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="contact-form">
+                    <form id="contactForm">
+                        <input type="text" placeholder="Your Name" required>
+                        <input type="email" placeholder="Your Email" required>
+                        <input type="tel" placeholder="Your Phone" required>
+                        <textarea placeholder="Your Message" rows="5" required></textarea>
+                        <button type="submit" class="btn-primary">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
 
-// Navbar background change on scroll
-window.addEventListener('scroll', () => {
-    const navbar = document.querySelector('.navbar');
-    if (window.scrollY > 50) {
-        navbar.style.background = 'rgba(255, 255, 255, 0.95)';
-        navbar.style.backdropFilter = 'blur(10px)';
-    } else {
-        navbar.style.background = '#fff';
-        navbar.style.backdropFilter = 'none';
-    }
-});
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="logo">
+                        <i class="fas fa-ship"></i>
+                        <span>BongoPortus</span>
+                    </div>
+                    <p>Your trusted partner for importing products from China to Bangladesh.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Services</h4>
+                    <ul>
+                        <li>Air Freight</li>
+                        <li>Sea Freight</li>
+                        <li>Customs Clearance</li>
+                        <li>Door-to-Door Delivery</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#services">Services</a></li>
+                        <li><a href="#products">Products</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Follow Us</h4>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 BongoPortus. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
 
-// Animate elements on scroll
-const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
-};
-
-const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            entry.target.style.transform = 'translateY(0)';
-        }
-    });
-}, observerOptions);
-
-// Observe elements for animation
-document.addEventListener('DOMContentLoaded', () => {
-    const animateElements = document.querySelectorAll('.service-card, .benefit, .feature');
-    
-    animateElements.forEach(el => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(30px)';
-        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-        observer.observe(el);
-    });
-});
-
-// Add loading animation for images
-document.addEventListener('DOMContentLoaded', () => {
-    const images = document.querySelectorAll('img');
-    
-    images.forEach(img => {
-        img.addEventListener('load', () => {
-            img.style.opacity = '1';
-        });
-        
-        // Set initial opacity
-        img.style.opacity = '0';
-        img.style.transition = 'opacity 0.3s ease';
-    });
-});
-
-// Add click effect to buttons
-document.querySelectorAll('.btn').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-        const ripple = document.createElement('span');
-        const rect = this.getBoundingClientRect();
-        const size = Math.max(rect.width, rect.height);
-        const x = e.clientX - rect.left - size / 2;
-        const y = e.clientY - rect.top - size / 2;
-        
-        ripple.style.width = ripple.style.height = size + 'px';
-        ripple.style.left = x + 'px';
-        ripple.style.top = y + 'px';
-        ripple.classList.add('ripple');
-        
-        this.appendChild(ripple);
-        
-        setTimeout(() => {
-            ripple.remove();
-        }, 600);
-    });
-});
-
-// Add ripple effect CSS
-const style = document.createElement('style');
-style.textContent = `
-    .btn {
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .ripple {
-        position: absolute;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.6);
-        transform: scale(0);
-        animation: ripple-animation 0.6s linear;
-        pointer-events: none;
-    }
-    
-    @keyframes ripple-animation {
-        to {
-            transform: scale(4);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
+    <script src="script.js"></script>
+</body>
+</html>
