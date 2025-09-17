@@ -2,10 +2,19 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface Deal {
+  id: string;
+  title: string;
+  client: string;
+  value: string;
+  status: string;
+  date: string;
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState('overview');
-  const [deals, setDeals] = useState<any[]>([]);
+  const [deals, setDeals] = useState<Deal[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
@@ -340,9 +349,9 @@ function OverviewSection() {
   );
 }
 
-function DealsSection({ deals, setDeals }: { deals: any[]; setDeals: (deals: any[]) => void }) {
+function DealsSection({ deals, setDeals }: { deals: Deal[]; setDeals: (deals: Deal[]) => void }) {
   const [showModal, setShowModal] = useState(false);
-  const [editingDeal, setEditingDeal] = useState<any>(null);
+  const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     client: '',

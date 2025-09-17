@@ -2,6 +2,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  password: string;
+  isAdmin?: boolean;
+}
+
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -64,7 +72,7 @@ export default function AuthPage() {
       } else {
         const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
         
-        if (existingUsers.find((user: any) => user.email === email)) {
+        if (existingUsers.find((user: User) => user.email === email)) {
           setError('User with this email already exists');
           return;
         }
@@ -87,7 +95,7 @@ export default function AuthPage() {
         setConfirmPassword('');
         setName('');
       }
-    } catch (err) {
+    } catch {
       setError('Authentication failed. Please try again.');
     } finally {
       setLoading(false);

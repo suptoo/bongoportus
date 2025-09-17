@@ -10,14 +10,27 @@ interface Product {
   url: string;
 }
 
+interface CartItem extends Product {
+  id: string;
+  quantity: number;
+}
+
+interface Order {
+  id: string;
+  items: CartItem[];
+  total: string;
+  date: string;
+  status: string;
+}
+
 export default function UserDashboard() {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
-  const [cart, setCart] = useState<any[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
@@ -390,7 +403,21 @@ function DashboardSection() {
   );
 }
 
-function SearchSection({ searchQuery, setSearchQuery, searchProducts, products, loading, addToCart }: any) {
+function SearchSection({ 
+  searchQuery, 
+  setSearchQuery, 
+  searchProducts, 
+  products, 
+  loading, 
+  addToCart 
+}: {
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  searchProducts: () => void;
+  products: Product[];
+  loading: boolean;
+  addToCart: (product: Product) => void;
+}) {
   return (
     <div>
       <div className="header">
@@ -457,9 +484,9 @@ function SearchSection({ searchQuery, setSearchQuery, searchProducts, products, 
   );
 }
 
-function CartSection({ cart, setCart }: any) {
+function CartSection({ cart, setCart }: { cart: CartItem[]; setCart: (cart: CartItem[]) => void }) {
   const removeFromCart = (id: string) => {
-    const updatedCart = cart.filter((item: any) => item.id !== id);
+    const updatedCart = cart.filter((item: CartItem) => item.id !== id);
     setCart(updatedCart);
     localStorage.setItem('userCart', JSON.stringify(updatedCart));
   };
@@ -494,7 +521,7 @@ function CartSection({ cart, setCart }: any) {
         </div>
       ) : (
         <div className="space-y-4">
-          {cart.map((item: any) => (
+          {cart.map((item: CartItem) => (
             <div key={item.id} className="glassmorphism p-4 flex items-center gap-4">
               <img
                 src={item.image}
@@ -526,7 +553,7 @@ function CartSection({ cart, setCart }: any) {
   );
 }
 
-function OrdersSection({ orders }: any) {
+function OrdersSection({ orders }: { orders: Order[] }) {
   return (
     <div>
       <div className="header">
@@ -542,7 +569,7 @@ function OrdersSection({ orders }: any) {
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map((order: any) => (
+          {orders.map((order: Order) => (
             <div key={order.id} className="glassmorphism p-6">
               <div className="flex justify-between items-start">
                 <div>

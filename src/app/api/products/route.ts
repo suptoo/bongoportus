@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
+import puppeteer, { Browser, Page } from 'puppeteer';
+
+interface Product {
+  title: string;
+  price: string;
+  image: string;
+  rating: string;
+  url: string;
+}
 
 // Cache for products (with query-specific caching)
 const productCache = new Map();
@@ -11,8 +19,8 @@ const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 10;
 
 class AmazonScraper {
-  private browser: any = null;
-  private page: any = null;
+  private browser: Browser | null = null;
+  private page: Page | null = null;
 
   async init() {
     try {
@@ -78,6 +86,10 @@ class AmazonScraper {
 
       console.log(`Searching Amazon for: "${query}" (${count} items)`);
       
+      if (!this.page) {
+        throw new Error('Page not initialized');
+      }
+      
       const searchUrl = `https://www.amazon.com/s?k=${encodeURIComponent(query)}&ref=sr_pg_1`;
       console.log('Navigating to:', searchUrl);
       
@@ -89,7 +101,7 @@ class AmazonScraper {
       // Wait for search results to load
       try {
         await this.page.waitForSelector('[data-component-type="s-search-result"]', { timeout: 15000 });
-      } catch (error) {
+      } catch {
         console.log('No search results found or timeout');
         return [];
       }
@@ -99,7 +111,13 @@ class AmazonScraper {
 
       const products = await this.page.evaluate((count: number) => {
         const items = document.querySelectorAll('[data-component-type="s-search-result"]');
-        const results: any[] = [];
+        const results: Array<{
+          title: string;
+          price: string;
+          image: string;
+          rating: string;
+          url: string;
+        }> = [];
         
         for (let i = 0; i < Math.min(items.length, count); i++) {
           const item = items[i];
@@ -190,7 +208,7 @@ class AmazonScraper {
       }, count);
 
       // Validate products and filter out invalid ones
-      const validProducts = products.filter((product: any) => 
+      const validProducts = products.filter((product: Product) => 
         product.title && 
         product.title !== 'Product Title' && 
         product.title.length > 3 &&
@@ -281,7 +299,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Health check endpoint
-export async function POST(request: NextRequest) {
+export async function POST() {
   return NextResponse.json({
     status: 'healthy',
     service: 'Amazon Product Scraper API',
