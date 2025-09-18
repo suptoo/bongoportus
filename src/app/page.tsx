@@ -1,221 +1,165 @@
-'use client';
-import ProductSearch from '@/components/ProductSearch';
-import ContactSection from '@/components/ContactSection';
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getRole } from "@/lib/role";
 
 export default function Home() {
+  const [query, setQuery] = useState("");
+  const router = useRouter();
+  // Hydration-safe: assume guest on first render, update after mount
+  const [role, setRoleState] = useState<"guest" | "user" | "admin">("guest");
+  useEffect(() => {
+    const r = getRole();
+    setRoleState(r === "admin" || r === "user" ? r : "guest");
+  }, []);
+  const isAuthed = role === "admin" || role === "user";
+  const base = role === "admin" ? "/admin" : "/user";
+
+  const onSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = query.trim();
+    if (role === 'admin') {
+      // Admin doesn't have search tab; route to chat instead
+      router.push(`${base}?tab=chat`);
+      return;
+    }
+    if (!isAuthed) {
+      const next = !q ? `/user?tab=search` : `/user?tab=search&q=${encodeURIComponent(q)}`;
+      router.push(`/auth?next=${encodeURIComponent(next)}`);
+      return;
+    }
+    // User
+    const target = !q ? `${base}?tab=search` : `${base}?tab=search&q=${encodeURIComponent(q)}`;
+    router.push(target);
+  };
   return (
     <div className="min-h-screen bg-black text-white">
       <style jsx global>{`
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-          font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-          overflow-x: hidden; background: #000; color: #fff;
-        }
+        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: #000; color: #fff; }
+        .wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+
+        /* HERO */
         .hero {
-          height: 100vh; position: relative; display: flex;
-          align-items: center; justify-content: center;
-          background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
-          overflow: hidden;
+          min-height: 70vh;
+          display: grid; place-items: center; text-align: center; padding: 64px 0 32px;
+          background: radial-gradient(1200px 600px at 50% -20%, rgba(255,255,255,0.06), transparent),
+                      linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
         }
-        .hero::before {
-          content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-          background: radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.1) 0%, transparent 50%);
-          animation: pulse 8s ease-in-out infinite;
+        .title { font-weight: 800; letter-spacing: 0.5px; line-height: 1.1; margin-bottom: 12px; }
+        .title span { background: linear-gradient(45deg, #6ee7b7, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { color: #a1a1aa; max-width: 640px; margin: 0 auto 24px; }
+
+        /* QUICK ACTIONS (app-like) */
+        .actions { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; max-width: 520px; margin: 0 auto; }
+        .action {
+          display: flex; align-items: center; justify-content: center; gap: 10px;
+          padding: 16px 16px; border-radius: 14px; text-decoration: none; color: #fff;
+          background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+          transition: transform .18s ease, background .18s ease, border-color .18s ease;
         }
-        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-        .hero-content { text-align: center; z-index: 2; max-width: 800px; padding: 0 2rem; }
-        .hero-title {
-          font-size: 4rem; font-weight: 900; margin-bottom: 1rem;
-          background: linear-gradient(45deg, #4CAF50, #81C784, #A5D6A7);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          text-transform: uppercase; letter-spacing: 3px;
+        .action:hover { transform: translateY(-2px); background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+        .action i { width: 18px; text-align: center; opacity: .9; }
+        @media (max-width: 420px) { .actions { grid-template-columns: 1fr; } .action { padding: 18px; } }
+
+        /* Search bar */
+  .searchWrap { margin: 18px auto 8px; max-width: 640px; display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+        .searchInput { padding: 14px 16px; border-radius: 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: #fff; outline: none; }
+        .searchInput:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.2); }
+        .searchBtn { padding: 14px 18px; border-radius: 14px; border: 1px solid rgba(255,255,255,.1); background: linear-gradient(45deg, #22c55e, #3b82f6); color: #fff; font-weight: 700; }
+  @media (max-width: 520px) { .searchWrap { grid-template-columns: 1fr; } .searchBtn { width: 100%; } }
+
+        /* FEATURE CARDS */
+        .section { padding: 28px 0 72px; }
+        .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+        .card {
+          padding: 18px; border-radius: 16px; background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08); min-height: 110px;
         }
-        .hero-subtitle { font-size: 1.5rem; margin-bottom: 2rem; color: #ccc; }
-        .hero-buttons { display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap; }
-        .cta-button {
-          padding: 1rem 2.5rem; font-size: 1.1rem; font-weight: 600;
-          text-decoration: none; border-radius: 50px; transition: all 0.4s ease;
-          text-transform: uppercase; letter-spacing: 1px;
-        }
-        .cta-primary {
-          background: linear-gradient(45deg, #4CAF50, #81C784); color: white;
-          box-shadow: 0 10px 30px rgba(76, 175, 80, 0.3);
-        }
-        .cta-primary:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(76, 175, 80, 0.5); }
-        .cta-secondary {
-          background: transparent; color: #4CAF50; border: 2px solid #4CAF50;
-        }
-        .cta-secondary:hover { background: #4CAF50; color: white; transform: translateY(-5px); }
-        .services {
-          padding: 8rem 2rem; background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .section-title {
-          text-align: center; font-size: 3rem; font-weight: 800; margin-bottom: 4rem;
-          background: linear-gradient(45deg, #4CAF50, #81C784);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          text-transform: uppercase; letter-spacing: 2px;
-        }
-        .services-grid {
-          display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-          gap: 3rem; margin-top: 4rem;
-        }
-        .service-card {
-          background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px);
-          border: 1px solid rgba(76, 175, 80, 0.2); border-radius: 20px;
-          padding: 3rem 2rem; text-align: center; transition: all 0.4s ease;
-        }
-        .service-card:hover {
-          transform: translateY(-15px); box-shadow: 0 25px 50px rgba(76, 175, 80, 0.3);
-          border-color: rgba(76, 175, 80, 0.5);
-        }
-        .service-icon {
-          font-size: 4rem; color: #4CAF50; margin-bottom: 2rem; display: block;
-        }
-        .service-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: #fff; }
-        .service-description { color: #ccc; line-height: 1.6; }
-        .stats {
-          padding: 6rem 2rem; background: rgba(76, 175, 80, 0.1);
-          border-top: 1px solid rgba(76, 175, 80, 0.3);
-          border-bottom: 1px solid rgba(76, 175, 80, 0.3);
-        }
-        .stats-grid {
-          display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 3rem; max-width: 1000px; margin: 0 auto;
-        }
-        .stat-item { text-align: center; }
-        .stat-number {
-          font-size: 3rem; font-weight: 900; color: #4CAF50;
-          display: block; margin-bottom: 0.5rem;
-        }
-        .stat-label {
-          font-size: 1.1rem; color: #ccc; text-transform: uppercase; letter-spacing: 1px;
-        }
-        .footer {
-          background: rgba(0, 0, 0, 0.95); padding: 3rem 2rem 2rem;
-          border-top: 1px solid rgba(76, 175, 80, 0.3);
-        }
-        .footer-content {
-          max-width: 1200px; margin: 0 auto;
-          display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 3rem;
-        }
-        .footer-section h3 { color: #4CAF50; margin-bottom: 1rem; }
-        .footer-section p, .footer-section a {
-          color: #ccc; text-decoration: none; line-height: 1.6;
-        }
-        .footer-section a:hover { color: #4CAF50; }
-        .footer-bottom {
-          text-align: center; margin-top: 2rem; padding-top: 2rem;
-          border-top: 1px solid rgba(76, 175, 80, 0.2); color: #666;
-        }
-        @media (max-width: 768px) {
-          .hero-title { font-size: 2.5rem; text-align: center; }
-          .hero-subtitle { font-size: 1rem; text-align: center; padding: 0 1rem; }
-          .hero-buttons { flex-direction: column; align-items: center; gap: 1rem; }
-          .cta-button { width: 200px; text-align: center; }
-          .services-grid { grid-template-columns: 1fr; padding: 0 1rem; }
-          .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
-          .container { padding: 0 1rem; }
-        }
+        .card h3 { font-size: 1rem; font-weight: 700; margin: 2px 0 6px; }
+        .card p { font-size: .9rem; color: #a1a1aa; }
+
+        /* FOOTER */
+        .footer { border-top: 1px solid rgba(255,255,255,.08); padding: 32px 0; color: #a1a1aa; font-size: .9rem; }
+
+        /* RESPONSIVE TYPE SCALE */
+        @media (min-width: 480px) { .title { font-size: 2.2rem; } .subtitle { font-size: 1rem; } }
+        @media (min-width: 768px) { .title { font-size: 3rem; }   .subtitle { font-size: 1.05rem; } }
+        @media (min-width: 1024px){ .title { font-size: 3.5rem; } }
       `}</style>
 
+      <main>
+        {/* Hero */}
+        <section className="hero">
+          <div className="wrap">
+            <h1 className="title">Make Trade Simple with <span>BongoPortus</span></h1>
+            <p className="subtitle">Global shopping, made simple. Source from Amazon and top suppliers and get fast air shipment to your door.</p>
 
-      <section className="hero" id="home">
-        <div className="hero-content">
-          <h1 className="hero-title">BongoPortus</h1>
-          <p className="hero-subtitle">Global Shipping Excellence • Product Discovery • Connecting Continents</p>
-          <div className="hero-buttons">
-            <a href="#search" className="cta-button cta-primary">Search Products</a>
-            <a href="#services" className="cta-button cta-secondary">Explore Services</a>
-          </div>
-        </div>
-      </section>
-
-      <section id="search" className="py-16 bg-gradient-to-br from-gray-900 to-black">
-        <div className="container">
-          <h2 className="section-title">Product Search</h2>
-          <ProductSearch />
-        </div>
-      </section>
-
-      <section className="services" id="services">
-        <div className="container">
-          <h2 className="section-title">Our Services</h2>
-          <div className="services-grid">
-            <div className="service-card">
-              <i className="fas fa-ship service-icon"></i>
-              <h3 className="service-title">Ocean Freight</h3>
-              <p className="service-description">Reliable ocean shipping solutions for cargo of all sizes.</p>
-            </div>
-            <div className="service-card">
-              <i className="fas fa-plane service-icon"></i>
-              <h3 className="service-title">Air Freight</h3>
-              <p className="service-description">Fast air cargo services for time-sensitive shipments.</p>
-            </div>
-            <div className="service-card">
-              <i className="fas fa-truck service-icon"></i>
-              <h3 className="service-title">Land Transport</h3>
-              <p className="service-description">Ground transportation and logistics solutions.</p>
-            </div>
-            <div className="service-card">
-              <i className="fas fa-warehouse service-icon"></i>
-              <h3 className="service-title">Warehousing</h3>
-              <p className="service-description">State-of-the-art storage facilities.</p>
-            </div>
-            <div className="service-card">
-              <i className="fas fa-anchor service-icon"></i>
-              <h3 className="service-title">Port Services</h3>
-              <p className="service-description">Complete port handling services.</p>
-            </div>
-            <div className="service-card">
-              <i className="fas fa-globe service-icon"></i>
-              <h3 className="service-title">Global Logistics</h3>
-              <p className="service-description">End-to-end logistics solutions.</p>
+            <form className="searchWrap" onSubmit={onSearch} role="search" aria-label="Product search">
+              <input
+                className="searchInput"
+                type="search"
+                placeholder="Search products (e.g. iPhone, shoes, headset)"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              <button className="searchBtn" type="submit"><i className="fa-solid fa-magnifying-glass"/> Search</button>
+            </form>
+            <div className="actions">
+              {/* Search Products: admin → chat, user → search, guest → auth next to user search */}
+              <Link
+                href={role === 'admin'
+                  ? `${base}?tab=chat`
+                  : (isAuthed ? `${base}?tab=search` : `/auth?next=${encodeURIComponent('/user?tab=search')}`)}
+                className="action"
+              >
+                <i className="fa-solid fa-magnifying-glass"/> Search Products
+              </Link>
+              {/* Chat */}
+              <Link
+                href={isAuthed ? `${base}?tab=chat` : `/auth?next=${encodeURIComponent('/user?tab=chat')}`}
+                className="action"
+              >
+                <i className="fa-solid fa-comments"/> Chat
+              </Link>
+              {/* Orders */}
+              <Link
+                href={isAuthed ? `${base}/orders` : `/auth?next=${encodeURIComponent('/user/orders')}`}
+                className="action"
+              >
+                <i className="fa-solid fa-box"/> Orders
+              </Link>
+              {/* Cart: admin → chat, user → cart tab, guest → auth next to user cart */}
+              <Link
+                href={role === 'admin'
+                  ? `${base}?tab=chat`
+                  : (isAuthed ? `${base}?tab=cart` : `/auth?next=${encodeURIComponent('/user?tab=cart')}`)}
+                className="action"
+              >
+                <i className="fa-solid fa-cart-shopping"/> Cart
+              </Link>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="stats">
-        <div className="container">
-          <div className="stats-grid">
-            <div className="stat-item">
-              <span className="stat-number">50,000+</span>
-              <span className="stat-label">Shipments Delivered</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">150+</span>
-              <span className="stat-label">Countries Served</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">500+</span>
-              <span className="stat-label">Partner Ports</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">99%</span>
-              <span className="stat-label">On-Time Delivery</span>
+        {/* Feature cards */}
+        <section className="section">
+          <div className="wrap">
+            <div className="cards">
+              <div className="card"><h3>Global Sourcing</h3><p>Amazon plus South Korea, China, and India—discover more in one place.</p></div>
+              <div className="card"><h3>Fast Air Shipment</h3><p>Priority air cargo options for quicker delivery on popular items.</p></div>
+              <div className="card"><h3>Mobile App Feel</h3><p>Streamlined UI built for thumbs—smooth and responsive on every phone.</p></div>
+              <div className="card"><h3>Help When You Need</h3><p>Chat with support anytime to track, request, or change orders.</p></div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <ContactSection />
+        </section>
+      </main>
 
       <footer className="footer">
-        <div className="footer-content">
-          <div className="footer-section">
-            <h3>🚢 BongoPortus</h3>
-            <p>Leading global shipping with innovative solutions and reliable service.</p>
-          </div>
-          <div className="footer-section">
-            <h3>Contact</h3>
-            <p><i className="fas fa-envelope"></i> info@bongoportus.com</p>
-            <p><i className="fas fa-phone"></i> +880 123 456 789</p>
-            <p><i className="fas fa-map-marker-alt"></i> Chittagong Port, Bangladesh</p>
-          </div>
-        </div>
-        <div className="footer-bottom">
-          <p>&copy; 2025 BongoPortus. All rights reserved.</p>
+        <div className="wrap">
+          © {new Date().getFullYear()} BongoPortus
         </div>
       </footer>
     </div>

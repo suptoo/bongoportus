@@ -1,12 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getRole, clearRole } from "@/lib/role";
 
 export default function MobileAuthFooter() {
   const router = useRouter();
-  const role = getRole();
+  // Hydration-safe: default to guest and update after mount
+  const [role, setRoleState] = useState<"guest" | "user" | "admin">("guest");
+  useEffect(() => {
+    const r = getRole();
+    if (r === "admin" || r === "user") setRoleState(r);
+    else setRoleState("guest");
+  }, []);
   const isAuthed = role === "admin" || role === "user";
 
   return (

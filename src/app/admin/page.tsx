@@ -1,6 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState, useEffect } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 interface Deal {
   id: string;
@@ -23,8 +23,10 @@ interface Message {
   replyTimestamp?: string;
 }
 
-export default function AdminDashboard() {
+function AdminDashboardClient() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState('overview');
   const [deals, setDeals] = useState<Deal[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -52,6 +54,15 @@ export default function AdminDashboard() {
       setDeals(JSON.parse(savedDeals));
     }
   }, [router]);
+
+  // Initialize tab from URL (?tab=chat|deals|analytics|overview)
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['overview', 'deals', 'analytics', 'chat'].includes(tab)) {
+      setActiveSection(tab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, searchParams]);
 
   if (!isAuthenticated) {
     return <div>Loading...</div>;
@@ -375,6 +386,14 @@ export default function AdminDashboard() {
   );
 }
 
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AdminDashboardClient />
+    </Suspense>
+  );
+}
+
 function OverviewSection() {
   return (
     <div>
@@ -431,6 +450,7 @@ function OverviewSection() {
 function DealsSection({ deals, setDeals }: { deals: Deal[]; setDeals: (deals: Deal[]) => void }) {
   const [showModal, setShowModal] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
+  const [printingDeal, setPrintingDeal] = useState<Deal | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     client: '',
@@ -512,6 +532,15 @@ function DealsSection({ deals, setDeals }: { deals: Deal[]; setDeals: (deals: De
                     className="btn btn-primary mr-2"
                   >
                     Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPrintingDeal(deal);
+                      setTimeout(() => window.print(), 100);
+                    }}
+                    className="btn btn-success mr-2"
+                  >
+                    Print
                   </button>
                   <button
                     onClick={() => {
@@ -599,6 +628,33 @@ function DealsSection({ deals, setDeals }: { deals: Deal[]; setDeals: (deals: De
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {printingDeal && (
+        <div className="modal" style={{ background: 'transparent' }}>
+          <div className="modal-content" style={{ maxWidth: '700px' }}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Deal Summary</h2>
+              <button className="btn btn-danger" onClick={() => setPrintingDeal(null)}>Close</button>
+            </div>
+            <div className="glassmorphism p-6">
+              <h3 className="text-xl font-semibold mb-2">{printingDeal.title}</h3>
+              <p className="text-gray-300">Client: <span className="text-white">{printingDeal.client}</span></p>
+              <p className="text-gray-300">Value: <span className="text-white">{printingDeal.value}</span></p>
+              <p className="text-gray-300">Status: <span className="text-white capitalize">{printingDeal.status}</span></p>
+              <p className="text-gray-300">Date: <span className="text-white">{printingDeal.date}</span></p>
+            </div>
+            <style jsx global>{`
+              @media print {
+                body * { visibility: hidden; }
+                .modal-content, .modal-content * { visibility: visible; }
+                .modal-content { position: absolute; left: 0; top: 0; width: 100%; border: none; background: white; color: black; }
+                .glassmorphism { background: white !important; color: black !important; border: none !important; }
+                .btn { display: none !important; }
+              }
+            `}</style>
           </div>
         </div>
       )}

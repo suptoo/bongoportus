@@ -1,6 +1,6 @@
-'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+"use client";
+import { Suspense, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { setRole } from '@/lib/role';
 
 interface User {
@@ -11,7 +11,7 @@ interface User {
   isAdmin?: boolean;
 }
 
-export default function AuthPage() {
+function AuthPageInner() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,6 +21,8 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const router = useRouter();
+  const search = useSearchParams();
+  const next = search.get('next');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,21 +58,22 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        const userData = {
-          email: email,
-          name: name || email.split('@')[0],
-          isAuthenticated: true,
-          loginTime: Date.now()
-        };
-        
-        localStorage.setItem('authToken', JSON.stringify(userData));
-
-        if (email === 'umorfaruksupto@gmail.com') {
-          setRole('admin');
-          router.push('/admin');
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!data.success) {
+          setError(data.error || 'Login failed');
+          return;
+        }
+        const role = data.role === 'admin' ? 'admin' : 'user';
+        setRole(role); // non-HttpOnly role cookie for UI
+        if (next) {
+          router.push(next);
         } else {
-          setRole('user');
-          router.push('/user');
+          router.push(role === 'admin' ? '/admin' : '/user');
         }
       } else {
         const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
@@ -91,7 +94,7 @@ export default function AuthPage() {
         existingUsers.push(newUser);
         localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
 
-        setSuccess('Account created successfully! Please login.');
+  setSuccess('Account created successfully! Please login.');
         setIsLogin(true);
         setEmail(email);
         setPassword('');
@@ -106,182 +109,113 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
-      <div 
-        className="w-full max-w-md"
-        style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(76, 175, 80, 0.3)',
-          borderRadius: '20px',
-          padding: '3rem',
-          boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)'
-        }}
-      >
-        <h1 
-          className="text-center mb-4"
-          style={{
-            fontSize: '2.5rem',
-            fontWeight: '900',
-            background: 'linear-gradient(45deg, #4CAF50, #81C784)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            textTransform: 'uppercase',
-            letterSpacing: '2px'
-          }}
-        >
-          BongoPortus
-        </h1>
-        
-        <p className="text-center text-gray-300 mb-8 text-lg">
-          {isLogin ? 'Welcome back! Please sign in.' : 'Create your account to get started.'}
-        </p>
-        
-        {error && (
-          <div 
-            className="mb-4 p-4 rounded-lg text-center"
-            style={{
-              background: 'rgba(244, 67, 54, 0.1)',
-              border: '1px solid rgba(244, 67, 54, 0.3)',
-              color: '#ff6b6b'
-            }}
-          >
-            <strong>Error:</strong> {error}
-          </div>
-        )}
+      <div className="min-h-screen bg-black text-white">
+        <style jsx>{`
+          .wrap { max-width: 420px; margin: 0 auto; padding: 20px; }
+          .brand { text-align: center; padding-top: 36px; padding-bottom: 10px; }
+          .brand h1 { font-weight: 900; letter-spacing: .5px; font-size: 1.8rem; }
+          .brand h1 span { background: linear-gradient(45deg, #22c55e, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+          .panel { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 22px; box-shadow: 0 20px 40px rgba(0,0,0,.35); }
+          .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+          .tab { padding: 10px 12px; text-align: center; border-radius: 10px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); cursor: pointer; }
+          .tab.active { background: linear-gradient(45deg, #22c55e, #3b82f6); border-color: transparent; }
+          .label { display:block; color: #a1a1aa; font-size: .85rem; margin-bottom: 6px; }
+          .input { width: 100%; padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); color: #fff; outline: none; }
+          .input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.2); }
+          .row { display: grid; gap: 12px; margin-bottom: 12px; }
+          .submit { width: 100%; padding: 12px 14px; border-radius: 12px; font-weight: 700; background: linear-gradient(45deg, #22c55e, #3b82f6); border: none; color: #fff; box-shadow: 0 12px 24px rgba(34,197,94,.25); }
+          .muted { text-align: center; color: #a1a1aa; font-size: .9rem; margin-top: 10px; }
+          .switch { color: #93c5fd; cursor: pointer; }
 
-        {success && (
-          <div 
-            className="mb-4 p-4 rounded-lg text-center"
-            style={{
-              background: 'rgba(76, 175, 80, 0.1)',
-              border: '1px solid rgba(76, 175, 80, 0.3)',
-              color: '#4CAF50'
-            }}
-          >
-            <strong>Success:</strong> {success}
-          </div>
-        )}
+          /* App-like mobile feel */
+          @media (max-width: 480px) {
+            .wrap { max-width: 100%; padding: 16px; }
+            .panel { border-radius: 18px; padding: 18px; }
+            .brand { padding-top: 26px; }
+          }
 
-        <form onSubmit={handleSubmit}>
-          {!isLogin && (
-            <div className="mb-6">
-              <label className="block mb-2 text-green-400 font-semibold uppercase tracking-wider text-sm">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => { setName(e.target.value); setError(''); setSuccess(''); }}
-                placeholder="Enter your full name"
-                className="w-full p-4 text-white rounded-full outline-none transition-all"
-                style={{
-                  border: '2px solid rgba(76, 175, 80, 0.3)',
-                  background: 'rgba(0, 0, 0, 0.7)'
-                }}
-                required
-              />
+          /* Desktop polish */
+          @media (min-width: 768px) {
+            .brand h1 { font-size: 2.2rem; }
+            .panel { padding: 26px; }
+          }
+        `}</style>
+
+        <div className="wrap">
+          <div className="brand">
+            <h1>Welcome to <span>BongoPortus</span></h1>
+            <div className="muted">{isLogin ? 'Sign in to continue' : 'Create your account to get started'}</div>
+          </div>
+
+          <div className="panel">
+            <div className="tabs">
+              <div className={`tab ${isLogin ? 'active' : ''}`} onClick={() => setIsLogin(true)}>Login</div>
+              <div className={`tab ${!isLogin ? 'active' : ''}`} onClick={() => setIsLogin(false)}>Sign Up</div>
             </div>
-          )}
 
-          <div className="mb-6">
-            <label className="block mb-2 text-green-400 font-semibold uppercase tracking-wider text-sm">
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(''); setSuccess(''); }}
-              placeholder="Enter your email address"
-              className="w-full p-4 text-white rounded-full outline-none transition-all"
-              style={{
-                border: '2px solid rgba(76, 175, 80, 0.3)',
-                background: 'rgba(0, 0, 0, 0.7)'
-              }}
-              required
-            />
-          </div>
+            {error && (
+              <div className="row" style={{marginBottom: 10}}>
+                <div className="input" style={{ borderColor: 'rgba(244,63,94,.45)', background: 'rgba(244,63,94,.08)', color: '#fca5a5' }}>
+                  <i className="fa-solid fa-circle-exclamation"/> <span style={{ marginLeft: 8 }}>{error}</span>
+                </div>
+              </div>
+            )}
 
-          <div className="mb-6">
-            <label className="block mb-2 text-green-400 font-semibold uppercase tracking-wider text-sm">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(''); setSuccess(''); }}
-              placeholder="Enter your password"
-              className="w-full p-4 text-white rounded-full outline-none transition-all"
-              style={{
-                border: '2px solid rgba(76, 175, 80, 0.3)',
-                background: 'rgba(0, 0, 0, 0.7)'
-              }}
-              required
-            />
-          </div>
+            {success && (
+              <div className="row" style={{marginBottom: 10}}>
+                <div className="input" style={{ borderColor: 'rgba(34,197,94,.45)', background: 'rgba(34,197,94,.08)', color: '#86efac' }}>
+                  <i className="fa-solid fa-circle-check"/> <span style={{ marginLeft: 8 }}>{success}</span>
+                </div>
+              </div>
+            )}
 
-          {!isLogin && (
-            <div className="mb-6">
-              <label className="block mb-2 text-green-400 font-semibold uppercase tracking-wider text-sm">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => { setConfirmPassword(e.target.value); setError(''); setSuccess(''); }}
-                placeholder="Confirm your password"
-                className="w-full p-4 text-white rounded-full outline-none transition-all"
-                style={{
-                  border: '2px solid rgba(76, 175, 80, 0.3)',
-                  background: 'rgba(0, 0, 0, 0.7)'
-                }}
-                required
-              />
+            <form onSubmit={handleSubmit}>
+              {!isLogin && (
+                <div className="row">
+                  <label className="label">Full Name</label>
+                  <input className="input" type="text" placeholder="John Doe" value={name} onChange={(e) => { setName(e.target.value); setError(''); setSuccess(''); }} required />
+                </div>
+              )}
+
+              <div className="row">
+                <label className="label">Email</label>
+                <input className="input" type="email" placeholder="name@example.com" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); setSuccess(''); }} required />
+              </div>
+
+              <div className="row">
+                <label className="label">Password</label>
+                <input className="input" type="password" placeholder="••••••••" value={password} onChange={(e) => { setPassword(e.target.value); setError(''); setSuccess(''); }} required />
+              </div>
+
+              {!isLogin && (
+                <div className="row">
+                  <label className="label">Confirm Password</label>
+                  <input className="input" type="password" placeholder="Re-type password" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setError(''); setSuccess(''); }} required />
+                </div>
+              )}
+
+              <button className="submit" type="submit" disabled={loading}>
+                {loading ? (isLogin ? 'Logging in…' : 'Creating account…') : (isLogin ? 'Login' : 'Create Account')}
+              </button>
+            </form>
+
+            <div className="muted" style={{marginTop: 12}}>
+              {isLogin ? (
+                <>Don’t have an account? <span className="switch" onClick={() => { setIsLogin(false); setError(''); setSuccess(''); }}>Sign up</span></>
+              ) : (
+                <>Already have an account? <span className="switch" onClick={() => { setIsLogin(true); setError(''); setSuccess(''); }}>Login</span></>
+              )}
             </div>
-          )}
-
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full p-4 rounded-full text-white font-bold uppercase tracking-wider text-lg transition-all hover:transform hover:-translate-y-1"
-            style={{
-              background: 'linear-gradient(45deg, #4CAF50, #81C784)',
-              opacity: loading ? 0.6 : 1,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: loading ? 'none' : '0 15px 30px rgba(76, 175, 80, 0.4)'
-            }}
-          >
-            {loading ? (isLogin ? 'Logging in...' : 'Creating Account...') : (isLogin ? 'Login' : 'Create Account')}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError('');
-              setSuccess('');
-              setEmail('');
-              setPassword('');
-              setConfirmPassword('');
-              setName('');
-            }}
-            className="w-full mt-4 p-3 rounded-full border-2 border-green-400/30 text-green-400 font-semibold transition-all hover:bg-green-400/10"
-          >
-            {isLogin ? 'Need an account? Sign up' : 'Already have an account? Login'}
-          </button>
-        </form>
-
-        <div className="text-center mt-8 text-gray-400 text-sm leading-relaxed">
-          <p>
-            <strong>Admin Access:</strong><br />
-            <span className="text-green-400 font-semibold">umorfaruksupto@gmail.com</span> → Admin Dashboard
-          </p>
-          <p className="mt-4">
-            <strong>User Access:</strong><br />
-            Any other email → User Dashboard
-          </p>
+          </div>
         </div>
       </div>
-    </div>
+    );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AuthPageInner />
+    </Suspense>
   );
 }

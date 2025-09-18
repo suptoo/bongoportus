@@ -9,7 +9,11 @@ export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [role, setRoleState] = useState(getRole());
+  // Start as 'guest' to keep SSR and first client render identical; update after mount
+  const [role, setRoleState] = useState<"guest" | "user" | "admin">("guest");
+  useEffect(() => {
+    setRoleState(getRole());
+  }, []);
 
   // Close menu on route change
   useEffect(() => {
@@ -30,12 +34,12 @@ export default function NavBar() {
     if (!isAuthed) {
       return [
         { href: "/", label: "Home" },
-        { href: "/admin", label: "Chat" },
+        { href: "/auth?next=%2Fuser%3Ftab%3Dchat", label: "Chat" },
       ];
     }
     const base = role === "admin" ? "/admin" : "/user";
     return [
-      { href: `${base}`, label: "Chat" },
+      { href: `${base}?tab=chat`, label: "Chat" },
       { href: `${base}/deals`, label: "Deals" },
       { href: `${base}/orders`, label: "Orders" },
       { href: `${base}/dashboard`, label: "Dashboard" },
@@ -50,7 +54,8 @@ export default function NavBar() {
         {/* Desktop links */}
         <ul className="nav-links desktop-nav">
           {menu.map((l) => {
-            const active = pathname === l.href;
+            const baseHref = l.href.split("?")[0];
+            const active = pathname === baseHref;
             return (
               <li key={l.href}>
                 <Link href={l.href} className={active ? "active-link" : undefined}>
@@ -80,7 +85,8 @@ export default function NavBar() {
       <div className={`mobile-drawer ${open ? "open" : ""}`}>
         <ul>
           {menu.map((l) => {
-            const active = pathname === l.href;
+            const baseHref = l.href.split("?")[0];
+            const active = pathname === baseHref;
             return (
               <li key={l.href}>
                 <Link href={l.href} className={active ? "active-link" : undefined}>

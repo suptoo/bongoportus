@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verifyJWT } from './lib/jwt';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Protected routes that require authentication
@@ -9,8 +10,28 @@ export function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   
   if (isProtectedRoute) {
-    // In a real application, you would check the authentication token here
-    // For this demo, we'll let the client-side handle authentication
+    const token = request.cookies.get('bp_session')?.value;
+    const secret = process.env.AUTH_SECRET || 'dev-secret-change-me';
+    const payload = token ? await verifyJWT(token, secret) : null;
+    if (!payload) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/auth';
+      // Preserve full path including search for better UX
+      const full = pathname + (request.nextUrl.search || '');
+      url.searchParams.set('next', full);
+      return NextResponse.redirect(url);
+    }
+    // Role-based base path enforcement
+    if (pathname.startsWith('/admin') && payload.role !== 'admin') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/user';
+      return NextResponse.redirect(url);
+    }
+    if (pathname.startsWith('/user') && payload.role === 'admin') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/admin';
+      return NextResponse.redirect(url);
+    }
     return NextResponse.next();
   }
   

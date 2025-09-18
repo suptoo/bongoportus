@@ -1,6 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState, useEffect } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
 interface Product {
@@ -24,11 +24,15 @@ interface Order {
   status: string;
 }
 
-export default function UserDashboard() {
+function UserDashboardInner() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
+  const [topTrending, setTopTrending] = useState<Product | null>(null);
+  const [trending, setTrending] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -63,20 +67,44 @@ export default function UserDashboard() {
     }
   }, [router]);
 
-  const searchProducts = async () => {
-    if (!searchQuery.trim()) return;
-    
+  // Initialize tab from URL (?tab=dashboard|search|cart|orders|chat)
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['dashboard', 'search', 'cart', 'orders', 'chat'].includes(tab)) {
+      setActiveSection(tab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, searchParams]);
+
+  const searchProducts = async (term?: string) => {
+    const q = (term ?? searchQuery).trim();
+    if (!q) return;
+
     setLoading(true);
     try {
-      const response = await fetch(`/api/products?category=${encodeURIComponent(searchQuery)}&count=8`);
+      const response = await fetch(`/api/products?category=${encodeURIComponent(q)}&count=8&trending=true`);
       const data = await response.json();
       setProducts(data.products || []);
+      setTopTrending(data.topTrending || null);
+      setTrending(data.trending || []);
     } catch (error) {
       console.error('Search error:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // If a search query comes from the URL (?q=...), prefill and run search
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) {
+      setActiveSection('search');
+      setSearchQuery(q);
+      // fire and forget
+      searchProducts(q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const addToCart = (product: Product) => {
     const cartItem = { ...product, id: Date.now().toString(), quantity: 1 };
@@ -400,6 +428,8 @@ export default function UserDashboard() {
             products={products}
             loading={loading}
             addToCart={addToCart}
+            topTrending={topTrending}
+            trending={trending}
           />
         )}
         {activeSection === 'cart' && <CartSection cart={cart} setCart={setCart} />}
@@ -407,6 +437,14 @@ export default function UserDashboard() {
         {activeSection === 'chat' && <ChatSection />}
       </div>
     </div>
+  );
+}
+
+export default function UserDashboard() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <UserDashboardInner />
+    </Suspense>
   );
 }
 
@@ -481,7 +519,9 @@ function SearchSection({
   searchProducts, 
   products, 
   loading, 
-  addToCart 
+  addToCart,
+  topTrending,
+  trending,
 }: {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -489,6 +529,8 @@ function SearchSection({
   products: Product[];
   loading: boolean;
   addToCart: (product: Product) => void;
+  topTrending: Product | null;
+  trending: Product[];
 }) {
   return (
     <div>
@@ -516,6 +558,22 @@ function SearchSection({
           </button>
         </div>
       </div>
+
+      {topTrending && (
+        <div className="glassmorphism p-5 mb-4">
+          <div className="flex items-center justify-between gap-3 flex-col sm:flex-row text-center sm:text-left">
+            <div>
+              <div className="text-sm text-gray-400">Top trending on Amazon</div>
+              <div className="text-lg font-semibold">{topTrending.title}</div>
+              <div className="text-green-400 font-bold">{topTrending.price}</div>
+            </div>
+            <button className="btn btn-primary" onClick={() => window.open(topTrending.url, '_blank')}>
+              <i className="fas fa-fire"></i>
+              View Trending
+            </button>
+          </div>
+        </div>
+      )}
 
       {products.length > 0 && (
         <div className="product-grid">

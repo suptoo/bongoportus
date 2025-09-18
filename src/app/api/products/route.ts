@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import puppeteer, { Browser, Page } from 'puppeteer';
+import * as cheerio from 'cheerio';
+import type { Cheerio, CheerioAPI } from 'cheerio';
 
 interface Product {
   title: string;
@@ -17,6 +19,109 @@ const CACHE_TTL = 10 * 60 * 1000; // 10 minutes cache
 const rateLimitMap = new Map();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 10;
+
+async function fetchWithHeaders(url: string): Promise<string> {
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Upgrade-Insecure-Requests': '1',
+    },
+  });
+  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
+  return await res.text();
+}
+
+async function parseAmazonSearchCheerio(query: string, count: number): Promise<Product[]> {
+  const searchUrl = `https://www.amazon.com/s?k=${encodeURIComponent(query)}&ref=nb_sb_noss`;
+  const html = await fetchWithHeaders(searchUrl);
+  const $: CheerioAPI = cheerio.load(html);
+  const results: Product[] = [];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  $('[data-component-type="s-search-result"]').each((_: number, el: any) => {
+    if (results.length >= count) return false;
+
+    const $el = $(el);
+    const title = $el.find('h2 a span').first().text().trim();
+    const linkPath = $el.find('h2 a').attr('href') || '';
+    const url = linkPath ? (linkPath.startsWith('http') ? linkPath : `https://www.amazon.com${linkPath}`) : '#';
+    const image = $el.find('img.s-image').attr('src') || $el.find('img').attr('src') || '';
+    let price = $el.find('.a-price .a-offscreen').first().text().trim();
+    if (!price) price = $el.find('.a-price-whole').first().text().trim();
+    if (price && !price.includes('$')) price = `$${price}`;
+    const ratingText = $el.find('.a-icon-alt').first().text().trim();
+    const ratingMatch = ratingText.match(/[\d.]+/);
+    const rating = ratingMatch ? ratingMatch[0] : '4.0';
+
+    if (title && image && url && !url.includes('/gp/help/')) {
+      results.push({
+        title: title.length > 100 ? title.substring(0, 100) + '...' : title,
+        price: price || 'Price not available',
+        image,
+        rating,
+        url,
+      });
+    }
+  });
+
+  return results;
+}
+
+async function fetchAmazonBestSellers(count: number): Promise<Product[]> {
+  // Amazon Best Sellers landing page
+  const bestUrl = 'https://www.amazon.com/Best-Sellers/zgbs';
+  const html = await fetchWithHeaders(bestUrl);
+  const $: CheerioAPI = cheerio.load(html);
+  const results: Product[] = [];
+
+  // Try multiple patterns, stop when we collect enough
+  const pushItem = (title?: string, url?: string, image?: string, price?: string, rating?: string) => {
+    if (!title || !url || !image) return;
+    results.push({
+      title: title.length > 100 ? title.substring(0, 100) + '...' : title,
+      url: url.startsWith('http') ? url : `https://www.amazon.com${url}`,
+      image,
+      price: price || 'Price not available',
+      rating: rating || '4.0',
+    });
+  };
+
+  // Pattern 1: faceout cards
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  $('.p13n-sc-uncoverable-faceout, .zg-grid-general-faceout, .zg-carousel-general-faceout').each((_: number, el: any) => {
+    if (results.length >= count) return false;
+    const $el = $(el);
+    const a = $el.find('a.a-link-normal').first();
+    const img = $el.find('img').first();
+    const title = (img.attr('alt') || a.attr('title') || '').trim();
+    const url = a.attr('href') || '';
+    const image = img.attr('src') || '';
+    const price = $el.find('.a-price .a-offscreen').first().text().trim();
+    const ratingText = $el.find('.a-icon-alt').first().text().trim();
+    const ratingMatch = ratingText.match(/[\d.]+/);
+    const rating = ratingMatch ? ratingMatch[0] : '4.0';
+    pushItem(title, url, image, price, rating);
+  });
+
+  // Pattern 2: generic anchor lists
+  if (results.length < count) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  $('a.a-link-normal[href*="/dp/"]').each((_: number, el: any) => {
+      if (results.length >= count) return false;
+      const $a = $(el);
+      const url = $a.attr('href') || '';
+      const title = $a.attr('title') || $a.find('img').attr('alt') || '';
+      const image = $a.find('img').attr('src') || '';
+      pushItem(title?.trim(), url, image);
+    });
+  }
+
+  return results;
+}
 
 class AmazonScraper {
   private browser: Browser | null = null;
@@ -63,13 +168,6 @@ class AmazonScraper {
 
   async searchProducts(query: string, count: number = 6) {
     try {
-      if (!this.page || !this.browser) {
-        const initialized = await this.init();
-        if (!initialized) {
-          throw new Error('Failed to initialize scraper');
-        }
-      }
-
       // Create cache key specific to query and count
       const cacheKey = `${query.toLowerCase().trim()}_${count}`;
       
@@ -85,31 +183,36 @@ class AmazonScraper {
       }
 
       console.log(`Searching Amazon for: "${query}" (${count} items)`);
-      
-      if (!this.page) {
-        throw new Error('Page not initialized');
-      }
-      
-      const searchUrl = `https://www.amazon.com/s?k=${encodeURIComponent(query)}&ref=sr_pg_1`;
-      console.log('Navigating to:', searchUrl);
-      
-      await this.page.goto(searchUrl, { 
-        waitUntil: 'networkidle2', 
-        timeout: 30000 
-      });
-      
-      // Wait for search results to load
-      try {
-        await this.page.waitForSelector('[data-component-type="s-search-result"]', { timeout: 15000 });
-      } catch {
-        console.log('No search results found or timeout');
-        return [];
-      }
-      
-      // Random delay to mimic human behavior
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
 
-      const products = await this.page.evaluate((count: number) => {
+      // First try lightweight Cheerio scraping
+      let products: Product[] = [];
+      try {
+        products = await parseAmazonSearchCheerio(query, count);
+      } catch (err) {
+        console.log('Cheerio search failed, will try Puppeteer fallback:', err);
+      }
+
+      // If too few results, fall back to Puppeteer
+      if (!products || products.length < Math.min(3, count)) {
+        if (!this.page || !this.browser) {
+          const initialized = await this.init();
+          if (!initialized) {
+            throw new Error('Failed to initialize scraper');
+          }
+        }
+        if (!this.page) throw new Error('Page not initialized');
+
+        const searchUrl = `https://www.amazon.com/s?k=${encodeURIComponent(query)}&ref=sr_pg_1`;
+        await this.page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+        try {
+          await this.page.waitForSelector('[data-component-type="s-search-result"]', { timeout: 15000 });
+        } catch {
+          console.log('No search results found or timeout');
+          return [];
+        }
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
+
+        const puppeteerProducts = await this.page.evaluate((count: number) => {
         const items = document.querySelectorAll('[data-component-type="s-search-result"]');
         const results: Array<{
           title: string;
@@ -204,8 +307,11 @@ class AmazonScraper {
           }
         }
         
-        return results;
-      }, count);
+          return results;
+        }, count);
+
+        products = puppeteerProducts as unknown as Product[];
+      }
 
       // Validate products and filter out invalid ones
       const validProducts = products.filter((product: Product) => 
@@ -248,6 +354,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category') || 'electronics';
     const count = Math.min(parseInt(searchParams.get('count') || '6'), 12); // Limit to 12 max
+    const includeTrending = (searchParams.get('trending') || 'true') !== 'false';
 
     // Simple rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown';
@@ -275,15 +382,43 @@ export async function GET(request: NextRequest) {
       scraper = new AmazonScraper();
     }
 
+    // Fetch search products (cheerio + puppeteer fallback)
     const products = await scraper.searchProducts(category, count);
-    
+
+    // Fetch trending (best sellers) with caching
+    let trending: Product[] = [];
+    let topTrending: Product | null = null;
+    if (includeTrending) {
+      const trendingKey = `TRENDING_${count}`;
+      if (productCache.has(trendingKey)) {
+        const cached = productCache.get(trendingKey);
+        if (Date.now() - cached.timestamp < CACHE_TTL) {
+          trending = cached.data;
+        } else {
+          productCache.delete(trendingKey);
+        }
+      }
+      if (trending.length === 0) {
+        try {
+          trending = await fetchAmazonBestSellers(Math.max(5, count));
+          productCache.set(trendingKey, { data: trending, timestamp: Date.now() });
+        } catch (err) {
+          console.log('Failed to fetch best sellers:', err);
+          trending = [];
+        }
+      }
+      topTrending = trending[0] || null;
+    }
+
     return NextResponse.json({
       success: true,
-      products: products,
+      products,
+      trending,
+      topTrending,
       count: products.length,
       query: category,
       cached: productCache.has(`${category.toLowerCase().trim()}_${count}`),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
     
   } catch (error) {
