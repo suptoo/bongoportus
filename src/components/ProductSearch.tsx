@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Image from 'next/image';
 
 interface Product {
   title: string;
@@ -219,9 +220,11 @@ export default function ProductSearch() {
         <div className="products-grid">
           {products.map((product, index) => (
             <div key={index} className="product-card">
-              <img
+              <Image
                 src={product.image}
                 alt={product.title}
+                width={300}
+                height={300}
                 className="product-image"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = '/placeholder-product.png';

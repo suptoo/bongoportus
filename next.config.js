@@ -16,11 +16,11 @@ const nextConfig = {
     ],
   },
   
-  // Environment variables
+  // Environment variables with fallbacks
   env: {
-    MONGODB_URI: process.env.MONGODB_URI,
-    JWT_SECRET: process.env.JWT_SECRET,
-    ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+    MONGODB_URI: process.env.MONGODB_URI || '',
+    JWT_SECRET: process.env.JWT_SECRET || '',
+    ADMIN_EMAIL: process.env.ADMIN_EMAIL || '',
   },
 };
 

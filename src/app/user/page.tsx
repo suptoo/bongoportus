@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 interface Product {
   title: string;
@@ -449,9 +450,11 @@ function SearchSection({
         <div className="product-grid">
           {products.map((product: Product, index: number) => (
             <div key={index} className="product-card">
-              <img
+              <Image
                 src={product.image}
                 alt={product.title}
+                width={300}
+                height={300}
                 className="product-image"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = '/placeholder-product.png';
@@ -523,9 +526,11 @@ function CartSection({ cart, setCart }: { cart: CartItem[]; setCart: (cart: Cart
         <div className="space-y-4">
           {cart.map((item: CartItem) => (
             <div key={item.id} className="glassmorphism p-4 flex items-center gap-4">
-              <img
+              <Image
                 src={item.image}
                 alt={item.title}
+                width={80}
+                height={80}
                 className="w-20 h-20 object-contain rounded-lg"
               />
               <div className="flex-1">
