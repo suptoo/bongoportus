@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { setRole } from '@/lib/role';
 
 interface User {
   id: string;
@@ -65,8 +66,10 @@ export default function AuthPage() {
         localStorage.setItem('authToken', JSON.stringify(userData));
 
         if (email === 'umorfaruksupto@gmail.com') {
+          setRole('admin');
           router.push('/admin');
         } else {
+          setRole('user');
           router.push('/user');
         }
       } else {

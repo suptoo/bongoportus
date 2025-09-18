@@ -1,16 +1,8 @@
 'use client';
-import Link from 'next/link';
-import { useState } from 'react';
 import ProductSearch from '@/components/ProductSearch';
 import ContactSection from '@/components/ContactSection';
 
 export default function Home() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-
   return (
     <div className="min-h-screen bg-black text-white">
       <style jsx global>{`
@@ -18,32 +10,6 @@ export default function Home() {
         body {
           font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
           overflow-x: hidden; background: #000; color: #fff;
-        }
-        .navbar {
-          position: fixed; top: 0; width: 100%; z-index: 1000;
-          background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px);
-          border-bottom: 1px solid rgba(76, 175, 80, 0.3);
-        }
-        .nav-container {
-          max-width: 1200px; margin: 0 auto; display: flex;
-          justify-content: space-between; align-items: center; padding: 1rem 2rem;
-        }
-        .logo {
-          font-size: 2rem; font-weight: bold;
-          background: linear-gradient(45deg, #4CAF50, #81C784);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          text-transform: uppercase; letter-spacing: 2px;
-        }
-        .nav-links { display: flex; gap: 2rem; list-style: none; }
-        .nav-links a {
-          color: #fff; text-decoration: none; font-weight: 500;
-          padding: 0.5rem 1rem; border-radius: 25px; transition: all 0.3s ease;
-        }
-        .nav-links a:hover { color: #4CAF50; transform: translateY(-3px); }
-        .admin-btn {
-          background: linear-gradient(45deg, #4CAF50, #81C784) !important;
-          color: white !important; padding: 0.7rem 1.5rem !important;
-          font-weight: 600; text-transform: uppercase;
         }
         .hero {
           height: 100vh; position: relative; display: flex;
@@ -143,49 +109,6 @@ export default function Home() {
           border-top: 1px solid rgba(76, 175, 80, 0.2); color: #666;
         }
         @media (max-width: 768px) {
-          .nav-container { padding: 1rem; }
-          .logo { font-size: 1.5rem; }
-          
-          .hamburger {
-            display: flex; flex-direction: column; gap: 4px;
-            background: none; border: none; cursor: pointer;
-            padding: 8px; z-index: 1001;
-          }
-          
-          .hamburger span {
-            width: 25px; height: 3px; background: #fff;
-            transition: all 0.3s ease; transform-origin: center;
-          }
-          
-          .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
-          .hamburger.open span:nth-child(2) { opacity: 0; }
-          .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(7px, -6px); }
-          
-          .nav-links {
-            display: none; position: fixed; top: 0; right: -100%;
-            width: 80%; max-width: 300px; height: 100vh;
-            background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px);
-            flex-direction: column; justify-content: center; align-items: center;
-            gap: 2rem; transition: right 0.3s ease; z-index: 1000;
-            border-left: 1px solid rgba(76, 175, 80, 0.3);
-            padding: 2rem 1rem;
-          }
-          
-          .nav-links.mobile-open {
-            display: flex; right: 0;
-          }
-          
-          .mobile-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); z-index: 999;
-            backdrop-filter: blur(5px);
-          }
-          
-          .nav-links a {
-            font-size: 1.2rem; text-align: center;
-            width: 200px; padding: 1rem;
-          }
-          
           .hero-title { font-size: 2.5rem; text-align: center; }
           .hero-subtitle { font-size: 1rem; text-align: center; padding: 0 1rem; }
           .hero-buttons { flex-direction: column; align-items: center; gap: 1rem; }
@@ -194,38 +117,8 @@ export default function Home() {
           .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
           .container { padding: 0 1rem; }
         }
-        
-        .hamburger { display: none; }
       `}</style>
-      
-      <nav className="navbar">
-        <div className="nav-container">
-          <div className="logo">🚢 BongoPortus</div>
-          
-          {/* Hamburger Menu Button */}
-          <button 
-            className={`hamburger ${isMenuOpen ? 'open' : ''}`}
-            onClick={toggleMenu}
-            aria-label="Toggle navigation menu"
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
-          
-          {/* Navigation Links */}
-          <ul className={`nav-links ${isMenuOpen ? 'mobile-open' : ''}`}>
-            <li><a href="#home" onClick={() => setIsMenuOpen(false)}>Home</a></li>
-            <li><a href="#search" onClick={() => setIsMenuOpen(false)}>Product Search</a></li>
-            <li><a href="#services" onClick={() => setIsMenuOpen(false)}>Services</a></li>
-            <li><a href="#contact" onClick={() => setIsMenuOpen(false)}>Contact</a></li>
-            <li><Link href="/auth" className="admin-btn" onClick={() => setIsMenuOpen(false)}>Login</Link></li>
-          </ul>
-          
-          {/* Mobile Overlay */}
-          {isMenuOpen && <div className="mobile-overlay" onClick={() => setIsMenuOpen(false)}></div>}
-        </div>
-      </nav>
+
 
       <section className="hero" id="home">
         <div className="hero-content">
