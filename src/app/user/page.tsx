@@ -33,6 +33,7 @@ export default function UserDashboard() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Check authentication
@@ -248,15 +249,85 @@ export default function UserDashboard() {
         @media (max-width: 768px) {
           .sidebar {
             transform: translateX(-100%);
+            width: 100%;
+            max-width: 320px;
+            transition: transform 0.3s ease;
+          }
+          .sidebar.mobile-open {
+            transform: translateX(0);
           }
           .main-content {
             margin-left: 0;
+            padding: 1rem;
           }
+          .hamburger-user {
+            display: block;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+          }
+          .hamburger-user:hover {
+            background: rgba(67, 233, 123, 0.8);
+          }
+          .mobile-overlay-user {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+            backdrop-filter: blur(5px);
+          }
+          .header {
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            margin-top: 3rem;
+          }
+          .product-grid {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+          }
+          .product-card {
+            padding: 1rem;
+          }
+          .search-container {
+            padding: 1rem;
+            margin: 1rem;
+          }
+        }
+        .hamburger-user {
+          display: none;
         }
       `}</style>
 
+      {/* Mobile Hamburger Menu */}
+      <button 
+        className="hamburger-user"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        aria-label="Toggle menu"
+      >
+        <i className="fas fa-bars"></i>
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="mobile-overlay-user"
+          onClick={() => setIsMobileMenuOpen(false)}
+        ></div>
+      )}
+
       {/* Sidebar */}
-      <div className="sidebar">
+      <div className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="p-6">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
             🛍️ BongoPortus User
@@ -267,7 +338,7 @@ export default function UserDashboard() {
           <a
             href="#"
             className={`nav-item ${activeSection === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveSection('dashboard')}
+            onClick={() => { setActiveSection('dashboard'); setIsMobileMenuOpen(false); }}
           >
             <i className="fas fa-home"></i>
             Dashboard
@@ -275,7 +346,7 @@ export default function UserDashboard() {
           <a
             href="#"
             className={`nav-item ${activeSection === 'search' ? 'active' : ''}`}
-            onClick={() => setActiveSection('search')}
+            onClick={() => { setActiveSection('search'); setIsMobileMenuOpen(false); }}
           >
             <i className="fas fa-search"></i>
             Product Search
@@ -283,7 +354,7 @@ export default function UserDashboard() {
           <a
             href="#"
             className={`nav-item ${activeSection === 'cart' ? 'active' : ''}`}
-            onClick={() => setActiveSection('cart')}
+            onClick={() => { setActiveSection('cart'); setIsMobileMenuOpen(false); }}
           >
             <i className="fas fa-shopping-cart"></i>
             Shopping Cart ({cart.length})
@@ -291,7 +362,7 @@ export default function UserDashboard() {
           <a
             href="#"
             className={`nav-item ${activeSection === 'orders' ? 'active' : ''}`}
-            onClick={() => setActiveSection('orders')}
+            onClick={() => { setActiveSection('orders'); setIsMobileMenuOpen(false); }}
           >
             <i className="fas fa-box"></i>
             Order History
@@ -299,7 +370,7 @@ export default function UserDashboard() {
           <a
             href="#"
             className={`nav-item ${activeSection === 'chat' ? 'active' : ''}`}
-            onClick={() => setActiveSection('chat')}
+            onClick={() => { setActiveSection('chat'); setIsMobileMenuOpen(false); }}
           >
             <i className="fas fa-comments"></i>
             Support Chat
@@ -596,31 +667,73 @@ function OrdersSection({ orders }: { orders: Order[] }) {
 
 function ChatSection() {
   const [messages, setMessages] = useState([
-    { id: 1, text: "Hello! How can I help you today?", sender: "support", time: "10:00 AM" }
+    { id: 1, text: "Welcome! How can we help you today?", sender: "support", time: "10:00 AM", customerName: "Support Team" }
   ]);
   const [newMessage, setNewMessage] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [subject, setSubject] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const sendMessage = () => {
-    if (newMessage.trim()) {
-      const message = {
-        id: Date.now(),
-        text: newMessage,
-        sender: "user",
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages([...messages, message]);
-      setNewMessage('');
-      
-      // Auto reply
-      setTimeout(() => {
-        const reply = {
-          id: Date.now() + 1,
-          text: "Thank you for your message. Our support team will get back to you shortly.",
-          sender: "support",
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !customerName.trim() || !customerEmail.trim()) {
+      setError('Please fill in your name, email, and message');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerName: customerName.trim(),
+          customerEmail: customerEmail.trim(),
+          subject: subject.trim() || 'Support Request',
+          message: newMessage.trim(),
+          type: 'new'
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const message = {
+          id: Date.now(),
+          text: newMessage,
+          sender: "user",
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          customerName: customerName
         };
-        setMessages(prev => [...prev, reply]);
-      }, 1000);
+        setMessages([...messages, message]);
+        setNewMessage('');
+        setSuccess('Message sent successfully! Our team will respond soon.');
+        
+        // Auto reply
+        setTimeout(() => {
+          const reply = {
+            id: Date.now() + 1,
+            text: "Thank you for contacting us! We have received your message and will get back to you within 24 hours.",
+            sender: "support",
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            customerName: "Support Team"
+          };
+          setMessages(prev => [...prev, reply]);
+        }, 1500);
+      } else {
+        setError(result.error || 'Failed to send message');
+      }
+    } catch (err) {
+      setError('Failed to send message. Please try again.');
+      console.error('Message error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -628,8 +741,65 @@ function ChatSection() {
     <div>
       <div className="header">
         <h1 className="text-3xl font-bold">💬 Support Chat</h1>
-        <p className="text-gray-400 mt-2">Get help from our support team</p>
+        <p className="text-gray-400 mt-2">Get help from our support team - we&apos;ll see your name and respond personally</p>
       </div>
+
+      {/* Customer Information Form */}
+      <div className="glassmorphism p-6 mb-6">
+        <h3 className="text-xl font-bold mb-4 text-green-400">Your Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-300 mb-2">Your Name *</label>
+            <input
+              type="text"
+              value={customerName}
+              onChange={(e) => { setCustomerName(e.target.value); setError(''); }}
+              placeholder="Enter your full name"
+              className="form-input"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-300 mb-2">Email Address *</label>
+            <input
+              type="email"
+              value={customerEmail}
+              onChange={(e) => { setCustomerEmail(e.target.value); setError(''); }}
+              placeholder="Enter your email"
+              className="form-input"
+              required
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-300 mb-2">Subject (Optional)</label>
+          <input
+            type="text"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="What is your message about?"
+            className="form-input"
+          />
+        </div>
+      </div>
+
+      {success && (
+        <div className="glassmorphism p-4 mb-4" style={{ background: 'rgba(76, 175, 80, 0.1)', borderColor: 'rgba(76, 175, 80, 0.3)' }}>
+          <div className="text-green-400 font-semibold">
+            <i className="fas fa-check-circle mr-2"></i>
+            {success}
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="glassmorphism p-4 mb-4" style={{ background: 'rgba(244, 67, 54, 0.1)', borderColor: 'rgba(244, 67, 54, 0.3)' }}>
+          <div className="text-red-400 font-semibold">
+            <i className="fas fa-exclamation-circle mr-2"></i>
+            {error}
+          </div>
+        </div>
+      )}
 
       <div className="glassmorphism p-6 h-96 flex flex-col">
         <div className="flex-1 overflow-y-auto mb-4 space-y-3">
@@ -639,12 +809,17 @@ function ChatSection() {
               className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-xs px-4 py-2 rounded-2xl ${
+                className={`max-w-xs px-4 py-3 rounded-2xl ${
                   msg.sender === 'user'
                     ? 'bg-gradient-to-r from-green-500 to-blue-600 text-white'
                     : 'bg-gray-700 text-white'
                 }`}
               >
+                <div className="flex items-center mb-1">
+                  <strong className="text-sm">
+                    {msg.sender === 'user' ? msg.customerName || 'You' : 'Support Team'}
+                  </strong>
+                </div>
                 <p className="text-sm">{msg.text}</p>
                 <p className="text-xs opacity-70 mt-1">{msg.time}</p>
               </div>
@@ -656,13 +831,24 @@ function ChatSection() {
           <input
             type="text"
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+            onChange={(e) => { setNewMessage(e.target.value); setError(''); setSuccess(''); }}
+            onKeyPress={(e) => e.key === 'Enter' && !loading && sendMessage()}
             placeholder="Type your message..."
             className="form-input flex-1"
+            disabled={loading}
           />
-          <button onClick={sendMessage} className="btn btn-success">
-            <i className="fas fa-paper-plane"></i>
+          <button 
+            onClick={sendMessage} 
+            disabled={loading || !customerName.trim() || !customerEmail.trim()}
+            className="btn btn-success"
+          >
+            {loading ? (
+              <>
+                <i className="fas fa-spinner fa-spin"></i>
+              </>
+            ) : (
+              <i className="fas fa-paper-plane"></i>
+            )}
           </button>
         </div>
       </div>

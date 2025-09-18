@@ -11,11 +11,24 @@ interface Deal {
   date: string;
 }
 
+interface Message {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  subject: string;
+  message: string;
+  timestamp: string;
+  status: 'unread' | 'read' | 'replied';
+  adminReply?: string;
+  replyTimestamp?: string;
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState('overview');
   const [deals, setDeals] = useState<Deal[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Check authentication
@@ -223,15 +236,81 @@ export default function AdminDashboard() {
         @media (max-width: 768px) {
           .sidebar {
             transform: translateX(-100%);
+            width: 100%;
+            max-width: 320px;
+            transition: transform 0.3s ease;
+          }
+          .sidebar.mobile-open {
+            transform: translateX(0);
           }
           .main-content {
             margin-left: 0;
+            padding: 1rem;
           }
+          .hamburger-admin {
+            display: block;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+          }
+          .hamburger-admin:hover {
+            background: rgba(102, 126, 234, 0.8);
+          }
+          .mobile-overlay-admin {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+            backdrop-filter: blur(5px);
+          }
+          .header {
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            margin-top: 3rem;
+          }
+          .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+          }
+          .stat-card {
+            padding: 1.5rem;
+          }
+        }
+        .hamburger-admin {
+          display: none;
         }
       `}</style>
 
+      {/* Mobile Hamburger Menu */}
+      <button 
+        className="hamburger-admin"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        aria-label="Toggle menu"
+      >
+        <i className="fas fa-bars"></i>
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="mobile-overlay-admin"
+          onClick={() => setIsMobileMenuOpen(false)}
+        ></div>
+      )}
+
       {/* Sidebar */}
-      <div className="sidebar">
+      <div className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="p-6">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
             🚢 BongoPortus Admin
@@ -242,7 +321,7 @@ export default function AdminDashboard() {
           <a
             href="#"
             className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveSection('overview')}
+            onClick={() => { setActiveSection('overview'); setIsMobileMenuOpen(false); }}
           >
             <i className="fas fa-tachometer-alt"></i>
             Dashboard Overview
@@ -250,7 +329,7 @@ export default function AdminDashboard() {
           <a
             href="#"
             className={`nav-item ${activeSection === 'deals' ? 'active' : ''}`}
-            onClick={() => setActiveSection('deals')}
+            onClick={() => { setActiveSection('deals'); setIsMobileMenuOpen(false); }}
           >
             <i className="fas fa-handshake"></i>
             Company Deals
@@ -258,7 +337,7 @@ export default function AdminDashboard() {
           <a
             href="#"
             className={`nav-item ${activeSection === 'analytics' ? 'active' : ''}`}
-            onClick={() => setActiveSection('analytics')}
+            onClick={() => { setActiveSection('analytics'); setIsMobileMenuOpen(false); }}
           >
             <i className="fas fa-chart-line"></i>
             Company Management
@@ -266,10 +345,10 @@ export default function AdminDashboard() {
           <a
             href="#"
             className={`nav-item ${activeSection === 'chat' ? 'active' : ''}`}
-            onClick={() => setActiveSection('chat')}
+            onClick={() => { setActiveSection('chat'); setIsMobileMenuOpen(false); }}
           >
             <i className="fas fa-comments"></i>
-            Business Chat
+            Customer Messages
           </a>
           <a
             href="#"
@@ -565,65 +644,269 @@ function AnalyticsSection() {
 }
 
 function ChatSection() {
-  const [messages, setMessages] = useState([
-    { id: 1, text: "Welcome to business chat!", sender: "system", time: "10:00 AM" },
-    { id: 2, text: "How can I assist you today?", sender: "support", time: "10:01 AM" }
-  ]);
-  const [newMessage, setNewMessage] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [adminReply, setAdminReply] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const sendMessage = () => {
-    if (newMessage.trim()) {
-      const message = {
-        id: Date.now(),
-        text: newMessage,
-        sender: "admin",
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages([...messages, message]);
-      setNewMessage('');
+  useEffect(() => {
+    fetchMessages();
+  }, []);
+
+  const fetchMessages = async () => {
+    try {
+      const response = await fetch('/api/messages');
+      const result = await response.json();
+      
+      if (result.success) {
+        setMessages(result.messages || []);
+      } else {
+        setError('Failed to load messages');
+      }
+    } catch (err) {
+      setError('Failed to load messages');
+      console.error('Error fetching messages:', err);
     }
+  };
+
+  const markAsRead = async (messageId: string) => {
+    try {
+      await fetch('/api/messages', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messageId,
+          status: 'read'
+        }),
+      });
+      
+      // Update local state
+      setMessages(messages.map(msg => 
+        msg.id === messageId ? { ...msg, status: 'read' } : msg
+      ));
+    } catch (err) {
+      console.error('Error marking message as read:', err);
+    }
+  };
+
+  const sendReply = async () => {
+    if (!adminReply.trim() || !selectedMessage) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messageId: selectedMessage.id,
+          adminReply: adminReply.trim(),
+          type: 'reply'
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSuccess('Reply sent successfully!');
+        setAdminReply('');
+        setSelectedMessage({ ...selectedMessage, adminReply: adminReply.trim(), status: 'replied' });
+        
+        // Update messages list
+        setMessages(messages.map(msg => 
+          msg.id === selectedMessage.id 
+            ? { ...msg, adminReply: adminReply.trim(), status: 'replied', replyTimestamp: new Date().toISOString() }
+            : msg
+        ));
+      } else {
+        setError(result.error || 'Failed to send reply');
+      }
+    } catch (err) {
+      setError('Failed to send reply');
+      console.error('Reply error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'unread': return 'text-red-400 bg-red-500/20';
+      case 'read': return 'text-yellow-400 bg-yellow-500/20';
+      case 'replied': return 'text-green-400 bg-green-500/20';
+      default: return 'text-gray-400 bg-gray-500/20';
+    }
+  };
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
     <div>
       <div className="header">
-        <h1 className="text-3xl font-bold">💬 Business Chat</h1>
-        <p className="text-gray-400 mt-2">Communicate with your team and clients</p>
+        <h1 className="text-3xl font-bold">💬 Customer Messages</h1>
+        <p className="text-gray-400 mt-2">Manage customer inquiries and support requests</p>
       </div>
 
-      <div className="glassmorphism p-6 h-96 flex flex-col">
-        <div className="flex-1 overflow-y-auto mb-4 space-y-3">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}
+      {error && (
+        <div className="glassmorphism p-4 mb-4" style={{ background: 'rgba(244, 67, 54, 0.1)', borderColor: 'rgba(244, 67, 54, 0.3)' }}>
+          <div className="text-red-400 font-semibold">
+            <i className="fas fa-exclamation-circle mr-2"></i>
+            {error}
+          </div>
+        </div>
+      )}
+
+      {success && (
+        <div className="glassmorphism p-4 mb-4" style={{ background: 'rgba(76, 175, 80, 0.1)', borderColor: 'rgba(76, 175, 80, 0.3)' }}>
+          <div className="text-green-400 font-semibold">
+            <i className="fas fa-check-circle mr-2"></i>
+            {success}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Messages List */}
+        <div className="glassmorphism p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold">All Messages ({messages.length})</h3>
+            <button 
+              onClick={fetchMessages}
+              className="btn btn-primary"
             >
-              <div
-                className={`max-w-xs px-4 py-2 rounded-2xl ${
-                  msg.sender === 'admin'
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
-                    : 'bg-gray-700 text-white'
-                }`}
-              >
-                <p className="text-sm">{msg.text}</p>
-                <p className="text-xs opacity-70 mt-1">{msg.time}</p>
+              <i className="fas fa-refresh mr-2"></i>
+              Refresh
+            </button>
+          </div>
+          
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {messages.length === 0 ? (
+              <div className="text-center py-8">
+                <i className="fas fa-inbox text-4xl text-gray-500 mb-4"></i>
+                <p className="text-gray-400">No messages yet</p>
+              </div>
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  onClick={() => {
+                    setSelectedMessage(message);
+                    if (message.status === 'unread') {
+                      markAsRead(message.id);
+                    }
+                    setError('');
+                    setSuccess('');
+                  }}
+                  className={`p-4 rounded-lg cursor-pointer transition-all hover:bg-white/10 ${
+                    selectedMessage?.id === message.id ? 'ring-2 ring-blue-500' : ''
+                  }`}
+                  style={{ background: 'rgba(255, 255, 255, 0.05)' }}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold text-white">{message.customerName}</h4>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(message.status)}`}>
+                      {message.status}
+                    </span>
+                  </div>
+                  <p className="text-sm text-blue-400 mb-1">{message.customerEmail}</p>
+                  <p className="text-sm text-gray-300 mb-2">{message.subject}</p>
+                  <p className="text-sm text-gray-400 line-clamp-2">{message.message}</p>
+                  <p className="text-xs text-gray-500 mt-2">{formatDateTime(message.timestamp)}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Message Details and Reply */}
+        <div className="glassmorphism p-6">
+          {selectedMessage ? (
+            <div>
+              <div className="mb-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">{selectedMessage.customerName}</h3>
+                    <p className="text-blue-400">{selectedMessage.customerEmail}</p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(selectedMessage.status)}`}>
+                    {selectedMessage.status}
+                  </span>
+                </div>
+                
+                <div className="glassmorphism p-4 mb-4">
+                  <h4 className="font-semibold text-green-400 mb-2">Subject: {selectedMessage.subject}</h4>
+                  <p className="text-gray-300 leading-relaxed">{selectedMessage.message}</p>
+                  <p className="text-sm text-gray-500 mt-3">
+                    Received: {formatDateTime(selectedMessage.timestamp)}
+                  </p>
+                </div>
+
+                {selectedMessage.adminReply && (
+                  <div className="glassmorphism p-4 mb-4" style={{ background: 'rgba(76, 175, 80, 0.1)' }}>
+                    <h4 className="font-semibold text-green-400 mb-2">Your Reply:</h4>
+                    <p className="text-gray-300 leading-relaxed">{selectedMessage.adminReply}</p>
+                    {selectedMessage.replyTimestamp && (
+                      <p className="text-sm text-gray-500 mt-3">
+                        Replied: {formatDateTime(selectedMessage.replyTimestamp)}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-white mb-3">
+                  {selectedMessage.adminReply ? 'Send Another Reply' : 'Send Reply'}
+                </h4>
+                <textarea
+                  value={adminReply}
+                  onChange={(e) => { setAdminReply(e.target.value); setError(''); setSuccess(''); }}
+                  placeholder="Type your reply to the customer..."
+                  className="form-input mb-4"
+                  rows={4}
+                  style={{ minHeight: '100px' }}
+                />
+                <button
+                  onClick={sendReply}
+                  disabled={loading || !adminReply.trim()}
+                  className="btn btn-success w-full"
+                >
+                  {loading ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin mr-2"></i>
+                      Sending Reply...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-reply mr-2"></i>
+                      Send Reply to {selectedMessage.customerName}
+                    </>
+                  )}
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-        
-        <div className="flex gap-3">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder="Type your message..."
-            className="form-input flex-1"
-          />
-          <button onClick={sendMessage} className="btn btn-primary">
-            <i className="fas fa-paper-plane"></i>
-          </button>
+          ) : (
+            <div className="text-center py-12">
+              <i className="fas fa-comments text-6xl text-gray-500 mb-4"></i>
+              <h3 className="text-xl font-bold text-gray-400 mb-2">Select a Message</h3>
+              <p className="text-gray-500">Choose a message from the list to view details and reply</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

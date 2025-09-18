@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import ProductSearch from '@/components/ProductSearch';
+import ContactSection from '@/components/ContactSection';
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -167,6 +168,7 @@ export default function Home() {
             flex-direction: column; justify-content: center; align-items: center;
             gap: 2rem; transition: right 0.3s ease; z-index: 1000;
             border-left: 1px solid rgba(76, 175, 80, 0.3);
+            padding: 2rem 1rem;
           }
           
           .nav-links.mobile-open {
@@ -176,6 +178,7 @@ export default function Home() {
           .mobile-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.5); z-index: 999;
+            backdrop-filter: blur(5px);
           }
           
           .nav-links a {
@@ -302,6 +305,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <ContactSection />
 
       <footer className="footer">
         <div className="footer-content">
